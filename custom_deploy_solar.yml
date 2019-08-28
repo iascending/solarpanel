@@ -1,0 +1,232 @@
+# scp -P 20022 admin1@58.96.101.127:~/nginx_https.conf .
+- hosts: target
+  become: yes
+  vars:
+    dir_virtualenv:  /usr/local/virtualenv/SolarPanels
+    dir_app_src: /Users/liqiang1/Desktop/Projects/SolarPanels
+    dir_app_dest: /usr/local/apps/SolarPanels
+    web_server_ip: '58.96.101.127'
+    uusername: www-data
+    nginx_version: nginx-1.17.1
+    nginx_tarball_url: "http://nginx.org/download/{{ nginx_version }}.tar.gz"
+    nginx_install_dir: "/tmp/{{ nginx_version }}"
+    nginx_sbin_path: "/usr/sbin/nginx"
+    nginx_conf_path: "/etc/nginx"
+    nginx_ssl_path: "/etc/nginx/ssl"
+    nginx_custom_modules: >
+      --prefix=/etc/nginx
+      --with-http_auth_request_module
+      --without-http_autoindex_module
+      --error-log-path=/var/log/nginx/error.log
+      --http-log-path=/var/log/nginx/access.log
+      --with-pcre
+      --pid-path=/var/run/nginx.pid
+      --with-http_ssl_module
+      --with-http_image_filter_module=dynamic
+      --modules-path=/etc/nginx/modules
+      --with-http_v2_module
+
+  tasks:
+    - name: Update and upgrade apt packages
+      apt:
+        force_apt_get: yes
+        cache_valid_time: 86400 #One day
+        update_cache: yes
+    - name: Install python-pip/supervisor/rsync packages
+      apt:
+        name: ['supervisor', 'rsync', 'python-pip', 'python3-distutils', 'python3.6-dev']
+        force_apt_get: yes
+        state: present
+
+    - name: Installing NGINX Dependencies
+      become: yes
+      apt:
+        name: ['build-essential', 'libssl-dev', 'zlib1g', 'zlib1g-dev', 'libpcre3', 'libpcre3-dev', 'libgd-dev', 'unzip']
+        update_cache: yes
+        force_apt_get: yes
+    - name: Downloading NGINX sources
+      get_url:
+        url: "{{ nginx_tarball_url }}"
+        dest: "/tmp/{{ nginx_version }}.tar.gz"
+      register: nginx_source
+    - name: Unpacking NGINX
+      unarchive:
+        copy: no
+        dest: /tmp/
+        src: "{{ nginx_source.dest }}"
+      when: nginx_source is changed
+      register: nginx_source_unpack
+    - name: Create required Nginx dirs
+      become: yes
+      file:
+        path: /etc/nginx
+        state: directory
+        owner: root
+        mode: 0755
+    - name: Configuring NGINX source with custom modules
+      command: "./configure --sbin-path={{ nginx_sbin_path }} --conf-path={{ nginx_conf_path }}/nginx.conf {{ nginx_custom_modules }}"
+      args:
+        chdir: "{{ nginx_install_dir }}"
+      when: nginx_source_unpack is changed
+      register: nginx_configure
+    - name: Installing NGINX
+      become: yes
+      shell: make && make install
+      args:
+        chdir: "{{ nginx_install_dir }}"
+      when: nginx_configure is changed
+
+    - name: Create SSL Directory
+      become: yes
+      file:
+        path: "{{nginx_ssl_path}}"
+        state: directory
+        owner: root
+        mode: 0755
+      register: ssl_dir_created
+    - name: Add subjectAltName to openssl.cnf
+      become: yes
+      lineinfile:
+        path: /etc/ssl/openssl.cnf
+        insertafter: '\[ v3_ca \]'
+        line: "subjectAltName = IP:{{web_server_ip}},IP:{{web_server_ip}}"
+        state: present
+    - name: Install SSL Certificate
+      become: yes
+      command: "openssl req -x509 -days 3650 -nodes -newkey rsa:2048 -keyout {{nginx_ssl_path}}/self.key -out {{nginx_ssl_path}}/self.crt -subj '/C=AU/ST=VIC/L=MMPT/O=MMPT Electrical/OU=IT/CN={{web_server_ip}}' -config /etc/ssl/openssl.cnf -sha256"
+      args:
+        chdir: "{{nginx_ssl_path}}"
+      when: ssl_dir_created is changed
+      register: ssl_crt_created
+    - name: Generate DH Parameters with a different size (2048 bits)
+      become: yes
+      command: "openssl dhparam -out {{nginx_ssl_path}}/dhparam.pem 2048"
+      args:
+        chdir: "{{nginx_ssl_path}}"
+      when: ssl_crt_created is changed
+      register: ssl_dhparam_created
+
+    - name: Install VirtualEnv
+      pip:
+        name: ['virtualenv']
+        state: present
+    - name: Create Application Directory
+      file:
+        path: "{{ dir_app_dest }}"
+        state: directory
+    - name: Create Virtualenv Directory
+      file:
+        path: "{{ dir_virtualenv }}"
+        owner: "{{ uusername }}"
+        group: "{{ uusername }}"
+        mode: 0700
+        state: directory
+    - name: Copy Application Project Directory
+      synchronize:
+        src: "{{ dir_app_src }}/src"
+        dest: "{{ dir_app_dest }}"
+        use_ssh_args: yes
+        partial: yes
+        rsync_path: "sudo rsync"
+        mode: push
+    - name: Recursively set directories permission mode
+      file:
+        path: "{{ dir_app_dest }}"
+        owner: "{{ uusername }}"
+        group: "{{ uusername }}"
+        mode: 0700
+        recurse: yes
+    - name: Set permission of manage.py for django_manage module
+      file:
+        path: "{{ dir_app_dest }}/src/manage.py"
+        mode: 0700
+    - name: Install Django Project Dependency
+      pip:
+        requirements: "{{ dir_app_dest }}/src/requirements.txt"
+        virtualenv: "{{ dir_virtualenv }}"
+        virtualenv_python: python3.6
+        virtualenv_command: /usr/local/bin/virtualenv
+        state: present
+    - name: Copy supervisor configuration files
+      copy: src="{{ item.src }}" dest="{{ item.dest }}"
+      with_items:
+        - { src: "uwsgi_solar.conf", dest: "/etc/supervisor/conf.d/uwsgi_solar.conf"}
+    - name: Change settings into production mode
+      lineinfile:
+        path: "{{ dir_app_dest }}/src/SolarPanels/settings.py"
+        regexp: '^DEBUG='
+        line: DEBUG=False
+    - name: Run Django collectstatic
+      django_manage:
+        app_path: "{{ dir_app_dest }}/src/"
+        command: collectstatic
+        virtualenv: "{{ dir_virtualenv }}/"
+    - supervisorctl:
+        name: uwsgi_solar
+        state: present
+
+    - name: Allow Nginx to read static directory and files
+      file:
+        path: "{{ dir_app_dest }}/src/static"
+        owner: "{{ uusername }}"
+        group: "{{ uusername }}"
+        mode: 0700
+        recurse: yes
+    - name: Allow Nginx to read src directory
+      file:
+        path: "{{ dir_app_dest }}/src"
+        owner: "{{ uusername }}"
+        group: "{{ uusername }}"
+        mode: 0700
+    - name: Allow Nginx to read SolarPanels directory
+      file:
+        path: "{{ dir_app_dest }}"
+        owner: "{{ uusername }}"
+        group: "{{ uusername }}"
+        mode: 0700
+    - name: Copy NGINX configuration files
+      copy:
+        src: "{{ item.src }}"
+        dest: "{{ item.dest }}"
+        owner: "{{ uusername }}"
+        group: "{{ uusername }}"
+        mode: 0700
+      with_items:
+        - { src: "nginx.conf",       dest: "{{ nginx_conf_path }}/nginx.conf"}
+        - { src: "nginx_http.conf",  dest: "{{ nginx_conf_path }}/sites-available/nginx_http.conf"}
+        - { src: "nginx_https.conf", dest: "{{ nginx_conf_path }}/sites-available/nginx_https.conf"}
+
+    - name: Disable the default site
+      file:
+        path: /etc/nginx/sites-enabled/default
+        state: absent
+    - name: Disable the default site
+      file:
+        path: /etc/nginx/sites-available/default
+        state: absent
+    - name: create symlink for nginx conf files
+      become: yes
+      file:
+        src: "{{ item.src }}"
+        dest: "{{ item.dest }}"
+        state: link
+      with_items:
+        - { src: "{{ nginx_conf_path }}/sites-available/nginx_http.conf",  dest: "{{ nginx_conf_path }}/sites-enabled/nginx_http.conf"}
+        - { src: "{{ nginx_conf_path }}/sites-available/nginx_https.conf", dest: "{{ nginx_conf_path }}/sites-enabled/nginx_https.conf"}
+
+    - name: Installing an NGINX service
+      become: yes
+      template:
+        src: nginx.service
+        dest: /lib/systemd/system
+        owner: root
+        group: root
+        mode: 0644
+    - name: start/restart supervisor
+      service:
+        name: supervisor
+        state: started
+    - name: start/restart nginx
+      service:
+        name: nginx
+        state: started

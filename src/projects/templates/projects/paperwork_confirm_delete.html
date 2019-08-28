@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% load bootstrap4 %}
+{% block content %}
+
+
+<div class="jumbotron" style="text-align: center; color: red;">
+  <br><h3>Delete Paperwork</h3><br>
+  <form method="post">{% csrf_token %}
+
+      <p> Are you sure to delete these paperworks? <p>
+
+      <input type="submit" class="btn btn--orange" value="Confirm">
+      <a href="{% url 'projects:paperworks_list' %}" class="btn btn--blue">Cancel</a>
+  </form>
+</div>
+
+
+{% endblock %}

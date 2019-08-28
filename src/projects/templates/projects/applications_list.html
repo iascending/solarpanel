@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="container">
+  {% if request.user.is_authenticated %}
+    <br><br>
+    <div class="form-group ">
+      <form class="form-inline justify-content-center">
+          <input class="form-control rounded col s12 16" type="search" name="search"
+                placeholder="Please search here"> </input>
+          <button type="submit" class="btn btn--orange">Search</button>
+      </form>
+    </div>
+    <br>
+    {% if applications_list %}
+      <table class="table">
+        <caption class="table__caption">The List of Registered Applications</caption>
+        <thead class="table__thead">
+          <tr class="table__tr">
+            <th class="table__th" scope="col"><a href="?order_by=customer__first_name">First Name</a></th>
+            <th class="table__th" scope="col"><a href="?order_by=customer__last_name">Last Name</a></th>
+            <th class="table__th" scope="col"><a href="?order_by=-dateApply">Applied</a></th>
+            <th class="table__th" scope="col">Approved</th>
+            <th class="table__th" scope="col"><a href="?order_by=createBy">CreateBy</a></th>
+            <th class="table__th" scope="col"><a href="?order_by=-dateCreate">Created</a></th>
+            <th class="table__th" scope="col"><a href="?order_by=-dateUpdate">Updated</a></th>
+            <th class="table__th table__col--nowrap" scope="col">Action</th>
+          </tr>
+       </thead>
+       <tbody class="table__tbody">
+         {% for record in applications_list %}
+             <tr class="table__tr">
+                 <td class="table__td" data-label="First Name">{{ record.customer.first_name }}</td>
+                 <td class="table__td" data-label="Last Name">{{ record.customer.last_name }}</td>
+                 <td class="table__td" data-label="Applied"> {% if record.dateApply %} {{ record.dateApply|date:'Y-m-d' }} {% else %} No {% endif %}</td>
+                 <td class="table__td" data-label="Approved"> {% if record.vicApprove %}<a href="/media/{{record.vicApprove}}"> Yes </a> {% else %} No {% endif %}</td>
+                 <td class="table__td" data-label="CreateBy">{{ record.createBy }}</td>
+                 <td class="table__td" data-label="Created"> {% if record.dateCreate %} {{ record.dateCreate|date:'Y-m-d' }} {% else %} No {% endif %}</td>
+                 <td class="table__td" data-label="Updated"> {% if record.dateUpdate %} {{ record.dateUpdate|date:'Y-m-d' }} {% else %} No {% endif %}</td>
+                 <td class="table__td table__col--nowrap" data-label="Action">
+                   <div class="table__td__btn">
+                     <button class="btn btn--blue"   {% if not perms.projects.change_application %} disabled {% endif %}><a {% if perms.projects.change_application %} href="{% url 'projects:update_application' record.pk %}" {% endif %}>Update</a></button>
+                     <button class="btn btn--orange" {% if not perms.projects.delete_application %} disabled {% endif %}><a {% if perms.projects.delete_application %} href="{% url 'projects:delete_application' record.pk %}" {% endif %}>Delete</a></button>
+                   </div>
+                 </td>
+             </tr>
+         {% endfor %}
+       </tbody>
+      </table>
+      {% if is_paginated %}
+          <div class="pagination">
+              <span class="page-links">
+                  {% if page_obj.has_previous %}
+                      <a href="?page={{ page_obj.previous_page_number }}">previous</a>
+                  {% endif %}
+                  <span class="page-current">
+                      Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}.
+                  </span>
+                  {% if page_obj.has_next %}
+                      <a href="?page={{ page_obj.next_page_number }}">next</a>
+                  {% endif %}
+              </span>
+          </div>
+      {% endif %}
+    {% else %}
+      <h3>No Applications Registered! :(</h3>
+    {% endif %}
+  {% else %}
+    <h2> Please Login First !</h2>
+  {% endif %}
+</div>
+
+{% endblock %}

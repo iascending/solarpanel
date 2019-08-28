@@ -1,0 +1,10 @@
+{
+    "python.pythonPath": "${workspaceFolder}/bin/python3.6",
+    "python.venvPath": "${workspaceFolder}",
+    "python.linting.pylintArgs": [ "--generate-members" ],
+
+    "files.associations": {
+        "**/*.yml": "ansible"
+    },
+}
+

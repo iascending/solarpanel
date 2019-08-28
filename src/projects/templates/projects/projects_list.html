@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="fluid-container">
+  {% if request.user.is_authenticated %}
+    <br><br>
+    <div class="form-group ">
+      <form class="form-inline justify-content-center">
+          <input class="form-control rounded col s12 16" type="search" name="search"
+                placeholder="Please search here"> </input>
+          <button type="submit" class="btn btn--orange">Search</button>
+      </form>
+    </div>
+    <br>
+    {% if projects_list %}
+      <table class="table">
+        <caption class="table__caption">The List of Projects</caption>
+        <thead class="table__thead">
+          <tr class="table__tr">
+            <th class="table__th" scope="col"><a href="?order_by=customer__first_name">Name</a></th>
+            <th class="table__th" scope="col"><a href="?order_by=phone">Phone</a></th>
+            <th class="table__th" scope="col"><a href="?order_by=-dateQuote">Quoted</a></th>
+            <th class="table__th" scope="col">Tax Assessment</th>
+            <th class="table__th" scope="col">Power Bill</th>
+            <th class="table__th" scope="col">Council Rate</th>
+            <th class="table__th" scope="col">NearMap</th>
+            <th class="table__th" scope="col"><a href="?order_by=-dateApply">Applied</a></th>
+            <th class="table__th" scope="col">Approved</th>
+            <th class="table__th" scope="col"><a href="?order_by=-dateInstall">Installed</a></th>
+            <th class="table__th" scope="col">Inspected</th>
+            <th class="table__th" scope="col">Installer</th>
+            <th class="table__th" scope="col"><a href="?order_by=-datePaper">Invoiced</a></th>
+            <th class="table__th" scope="col">EWR</th>
+            <th class="table__th" scope="col">PV</th>
+          </tr>
+       </thead>
+       <tbody class="table__tbody">
+         {% for record in projects_list %}
+             <tr class="table__tr">
+                 <td class="table__td" data-label="Name">{{ record.customer.first_name }} {{ record.customer.last_name }}</td>
+                 <td class="table__td" data-label="Phone">{{ record.phone }}</td>
+                 <td class="table__td" data-label="Quoted"> {% if record.quoteFile %} <a href="/media/{{record.quoteFile}}"> {{ record.dateQuote|date:'Y-m-d' }} </a> {% else %} {{ record.dateQuote|date:'Y-m-d' }} {% endif %}</td>
+                 <td class="table__td" data-label="Tax Assessment"> {% if record.taxAssess %} <a href="/media/{{record.taxAssess}}"> Yes </a> {% else %} No {% endif %}</td>
+                 <td class="table__td" data-label="Power Bill"> {% if record.powerBill %} <a href="/media/{{record.powerBill}}"> Yes </a> {% else %} No {% endif %}</td>
+                 <td class="table__td" data-label="Council Rate"> {% if record.cncilRate %} <a href="/media/{{record.cncilRate}}"> Yes </a> {% else %} No {% endif %}</td>
+                 <td class="table__td" data-label="Nearmap"> {% if record.nearMap %} <a href="/media/{{record.nearMap}}"> Yes </a> {% else %} No {% endif %}</td>
+                 <td class="table__td" data-label="Applied"> {% if record.dateApply %} {{ record.dateApply|date:'Y-m-d' }} {% else %} No {% endif %}</td>
+                 <td class="table__td" data-label="Approved"> {% if record.vicApprove %}<a href="/media/{{record.vicApprove}}"> Yes </a> {% else %} No {% endif %}</td>
+                 <td class="table__td" data-label="Installed"> {% if record.dateInstall %} <a href="/media/{{record.installFile}}"> {{ record.dateInstall|date:'Y-m-d' }} </a> {% else %} No {% endif %}</td>
+                 <td class="table__td" data-label="Inspected"> {% if record.inspectFile %} <a href="/media/{{record.inspectFile}}"> Yes </a> {% else %} No {% endif %}</td>
+                 <td class="table__td" data-label="Installer"> {% if record.installer %} {{record.installer}} {% else %} No {% endif %}</td>
+                 <td class="table__td" data-label="Invoiced"> {% if record.datePaper %} <a href="/media/{{record.invoiceFile}}"> {{ record.datePaper|date:'Y-m-d' }} </a> {% else %} No {% endif %}</td>
+                 <td class="table__td" data-label="EWR"> {% if record.ewrFile %} <a href="/media/{{record.ewrFile}}"> Yes </a> {% else %} No {% endif %}</td>
+                 <td class="table__td" data-label="PV"> {% if record.pvFile %} <a href="/media/{{record.pvFile}}"> Yes </a> {% else %} No {% endif %}</td>
+             </tr>
+         {% endfor %}
+       </tbody>
+      </table>
+      {% if is_paginated %}
+          <div class="pagination">
+              <span class="page-links">
+                  {% if page_obj.has_previous %}
+                      <a href="?page={{ page_obj.previous_page_number }}">previous</a>
+                  {% endif %}
+                  <span class="page-current">
+                      Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}.
+                  </span>
+                  {% if page_obj.has_next %}
+                      <a href="?page={{ page_obj.next_page_number }}">next</a>
+                  {% endif %}
+              </span>
+          </div>
+      {% endif %}
+    {% else %}
+      <h3>No Available Projects! :(</h3>
+    {% endif %}
+  {% else %}
+    <h2> Please Login First !</h2>
+  {% endif %}
+</div>
+
+{% endblock %}

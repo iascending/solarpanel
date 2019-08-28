@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% load bootstrap4 %}
+{% block content %}
+
+    <div class="container">
+       <br><h1>New Project Quote</h1>
+
+        <form class="quote" method="POST" action="{% url 'projects:quotes_list' %}">
+            {% csrf_token %}
+            {{ forms.quote.media }}
+            {% bootstrap_form forms.quote %}
+            <button name='action' value='quote' type="submit">Sign in</button>
+        </form>
+        <hr style="display: block; height: 1px; border: 0; border-top: 3px solid #333; margin: 3rem 0;"/>
+        <form class="approval" method="POST" action="{% url 'projects:quotes_list' %}">
+            {% csrf_token %}
+            {{ forms.approval.media }}
+            <!-- {% bootstrap_field forms.approval.approvedBy placeholder='Approved By' %} -->
+            {% bootstrap_form forms.approval %}
+            <button name='action' value='approval' type="submit">Sign up</button>
+        </form>
+    </div>
+
+{% endblock %}

@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="container">
+  {% if request.user.is_authenticated %}
+    <br><br>
+    <div class="form-group ">
+      <form class="form-inline justify-content-center">
+          <input class="form-control rounded col s12 16" type="search" name="search"
+                placeholder="Please search here"> </input>
+          <button type="submit" class="btn btn--orange">Search</button>
+      </form>
+    </div>
+    <br>
+    {% if quotes_list %}
+      <table class="table">
+        <caption class="table__caption">The List of Registered Quotes</caption>
+        <thead class="table__thead">
+          <tr class="table__tr">
+            <th class="table__th" scope="col"><a href="?order_by=customer__first_name">First Name</a></th>
+            <th class="table__th" scope="col"><a href="?order_by=customer__last_name">Last Name</a></th>
+            <th class="table__th" scope="col">Quoted</th>
+            <th class="table__th" scope="col">Tax</th>
+            <th class="table__th" scope="col">Power Bill</th>
+            <th class="table__th" scope="col">Council Rate</th>
+            <th class="table__th" scope="col">Nearmap</th>
+            <th class="table__th" scope="col"><a href="?order_by=createBy">CreateBy</a></th>
+            <th class="table__th" scope="col"><a href="?order_by=-dateCreate">Created</a></th>
+            <th class="table__th" scope="col"><a href="?order_by=-dateUpdate">Updated</a></th>
+            <th class="table__th table__col--nowrap" scope="col">Action</th>
+          </tr>
+       </thead>
+       <tbody class="table__tbody">
+         {% for record in quotes_list %}
+             <tr class="table__tr">
+                 <td class="table__td" data-label="First Name">{{ record.customer.first_name }}</td>
+                 <td class="table__td" data-label="Last Name">{{ record.customer.last_name }}</td>
+                 <td class="table__td" data-label="Quoted">{% if record.quoteFile %} <a href="/media/{{record.quoteFile}}"> {{ record.dateQuote|date:'Y-m-d' }}</a> {% else %} {{ record.dateQuote|date:'Y-m-d' }} {% endif %}</td>
+                 <td class="table__td" data-label="Tax">{% if record.taxAssess %} <a href="/media/{{record.taxAssess}}"> Yes </a> {% else %} No {% endif %}</td>
+                 <td class="table__td" data-label="Power Bill">{% if record.powerBill %} <a href="/media/{{record.powerBill}}"> Yes </a> {% else %} No {% endif %}</td>
+                 <td class="table__td" data-label="Council Rate">{% if record.cncilRate %} <a href="/media/{{record.cncilRate}}"> Yes </a> {% else %} No {% endif %}</td>
+                 <td class="table__td" data-label="Nearmap">{% if record.nearMap %} <a href="/media/{{record.nearMap}}"> Yes </a> {% else %} No {% endif %}</td>
+                 <td class="table__td" data-label="CreateBy">{{ record.createBy }}</td>
+                 <td class="table__td" data-label="Created">{{ record.dateCreate|date:'Y-m-d' }}</td>
+                 <td class="table__td" data-label="Updated">{{ record.dateUpdate|date:'Y-m-d' }}</td>
+                 <td class="table__td table__col--nowrap" data-label="Action">
+                   <div class="table__td__btn">
+                     <button class="btn btn--blue"   {% if not perms.projects.change_quote %} disabled {% endif %}><a {% if perms.projects.change_quote %} href="{% url 'projects:update_quote' record.pk %}" {% endif %}>Update</a></button>
+                     <button class="btn btn--orange" {% if not perms.projects.delete_quote %} disabled {% endif %}><a {% if perms.projects.delete_quote %} href="{% url 'projects:delete_quote' record.pk %}" {% endif %}>Delete</a></button>
+                   </div>
+                 </td>
+             </tr>
+         {% endfor %}
+       </tbody>
+      </table>
+      {% if is_paginated %}
+          <div class="pagination">
+              <span class="page-links">
+                  {% if page_obj.has_previous %}
+                      <a href="?page={{ page_obj.previous_page_number }}">previous</a>
+                  {% endif %}
+                  <span class="page-current">
+                      Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}.
+                  </span>
+                  {% if page_obj.has_next %}
+                      <a href="?page={{ page_obj.next_page_number }}">next</a>
+                  {% endif %}
+              </span>
+          </div>
+      {% endif %}
+    {% else %}
+      <h3>No Quotes Registered! :(</h3>
+    {% endif %}
+  {% else %}
+    <h2> Please Login First !</h2>
+  {% endif %}
+</div>
+
+{% endblock %}
