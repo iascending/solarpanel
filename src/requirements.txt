@@ -5,7 +5,7 @@ cffi==1.12.3
 cryptography==2.7
 defusedxml==0.6.0
 diff-match-patch==20181111
-Django==2.2.2
+Django==2.2.13
 django-bootstrap4==0.0.8
 django-import-export==1.2.0
 et-xmlfile==1.0.1
