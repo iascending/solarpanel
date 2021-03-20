@@ -10,7 +10,7 @@ django-bootstrap4==0.0.8
 django-import-export==1.2.0
 et-xmlfile==1.0.1
 jdcal==1.4.1
-Jinja2==2.10.1
+Jinja2==2.11.3
 MarkupSafe==1.1.1
 odfpy==1.4.0
 openpyxl==2.6.2
